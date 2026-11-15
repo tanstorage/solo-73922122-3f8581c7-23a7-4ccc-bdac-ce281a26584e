@@ -9,7 +9,7 @@
 <body>
 <header>
   <h1>临床数据匿名化发布平台</h1>
-  <p class="subtitle">小群体消除 · k-匿名（每组 ≥ 3 人且 ≥ 2 种病种）· 发布前移除受试者号</p>
+  <p class="subtitle">小群体消除 · k-匿名（每组 ≥ 3 人且 ≥ 2 种病种）· 发布前移除受试者号 · 撤回授权整批拒收</p>
 </header>
 
 <main>
@@ -29,9 +29,33 @@
     </form>
   </section>
 
+  <section class="card">
+    <h2>2. 受试者撤回登记</h2>
+    <p class="hint">受试者撤回共享授权后，在此登记其受试者号。登记立即生效并持久保存（重启后仍阻断）：
+      已有待确认预览随即失效；此后任何含该号的源 CSV 将<strong>整批拒收</strong>（即使匿名方案会剔除该行）；
+      已发布文件不受影响，仍按原字节提供下载。</p>
+    <form action="/withdrawals" method="post" class="withdraw-form">
+      <input type="text" name="subject_id" placeholder="受试者号" maxlength="128" required>
+      <button type="submit" class="primary">登记撤回</button>
+    </form>
+    {% if withdrawals %}
+    <h3>已登记撤回的受试者号（{{ withdrawals|length }}）</h3>
+    <table>
+      <thead><tr><th>受试者号</th><th>登记时间</th></tr></thead>
+      <tbody>
+      {% for w in withdrawals %}
+        <tr><td>{{ w.subject_id }}</td><td>{{ w.created_at }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="hint">尚无撤回登记。</p>
+    {% endif %}
+  </section>
+
   {% if pending and pending_plan %}
   <section class="card preview" id="preview">
-    <h2>2. 匿名预览（批次 #{{ pending.id }}）</h2>
+    <h2>3. 匿名预览（批次 #{{ pending.id }}）</h2>
     <p class="hint">来源文件：{{ pending.source_filename }} ｜ 原始 {{ pending.row_count }} 行，
       剔除 {{ pending_plan.removed_count }} 行，保留 {{ pending_plan.output_rows|length }} 行</p>
 
@@ -80,13 +104,13 @@
   </section>
   {% else %}
   <section class="card muted">
-    <h2>2. 匿名预览</h2>
+    <h2>3. 匿名预览</h2>
     <p>当前没有待确认的预览。请先上传 CSV；若不存在可行方案，系统会明确提示且不能发布。</p>
   </section>
   {% endif %}
 
   <section class="card">
-    <h2>3. 已发布的匿名文件</h2>
+    <h2>4. 已发布的匿名文件</h2>
     {% if published %}
     <table>
       <thead><tr><th>批次</th><th>来源文件</th><th>发布时间</th><th>行数</th><th>下载</th></tr></thead>
@@ -115,6 +139,7 @@
       <li>最多剔除 2 行；保留数据中每个（年龄, 邮编）组合须至少 3 人，且包含至少两种病种。</li>
       <li>在全部可行方案中选择两列隐藏等级之和最小者；同级先少剔除，再优先保留年龄精度。</li>
       <li>再次上传后，旧预览立即失效且不可发布；发布失败不会产生任何可下载残件。</li>
+      <li>登记撤回后：已有待确认预览立即失效；含该受试者号的源 CSV 整批拒收（即使方案会剔除该行）；已发布文件保持原字节可下载；登记与上传、发布交错时按 SQLite 事务提交顺序裁决。</li>
     </ul>
   </section>
 </main>
